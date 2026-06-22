@@ -1,4 +1,4 @@
-# SCofRemoteMry
+﻿# SCofRemoteMry
 Analysis Scripts and Software Resources Overview
 
 This repository offers complete code to replicate and regenerate analyses and figures reported in the paper“Hippocampal-cortical coupling dynamics drive system consolidation of remote memory”
@@ -9,7 +9,7 @@ We utilized existing open‑source toolboxes packages in various parts of the pi
 
 Chronux Toolbox – for spectral and coherence analyses
 
-Buzcode – for hippocampal spike sorting and LFP processing
+Buzcode – for spike and LFP processing
 
 AccuSleep – for automatic sleep stage classification
 
@@ -37,11 +37,11 @@ Offline Sorter (Plexon Inc.) – manual and automated spike sorting (version x64
 
 NeuroExplorer 5 x64 – for perievent time histograms (PSTH), interspike interval (ISI) analyses, and raster plots.
 
-Freeze Frame 4 – automated scoring of freezing behavior (threshold‑based motion detection).
+Freeze Frame 4 – automated scoring of freezing behavior.
 
-GraphPad Prism 8.0.2 – used for generating final statistical plots (bar graphs, scatter, survival curves).
+GraphPad Prism 8.0.2 – used for generating final statistical plots.
 
 ImageJ 1.47v – only for verifying optrode tip positions from histology images.
 
-MouseOx Plus – pulse oximetry for monitoring physiological status during surgery.
+MouseOx Plus – pulse oximetry for monitoring physiological status.
 
