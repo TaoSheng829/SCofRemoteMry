@@ -5,7 +5,7 @@ This repository offers complete code to replicate and regenerate analyses and fi
 
 This repository contains scripts and software tools used in our study to process electrophysiological and behavioral data, perform coherence-based closed-loop optogenetic intervention
 
-We utilized existing open‑source toolboxes and commercial software packages in various parts of the pipeline, including:
+We utilized existing open‑source toolboxes packages in various parts of the pipeline, including:
 
 Chronux Toolbox – for spectral and coherence analyses
 
