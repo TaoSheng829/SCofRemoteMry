@@ -1,0 +1,173 @@
+
+function [filtered,amp,phase] = wy_Filter(samples,varargin)
+%Filter - Filter samples.
+%INPUT
+%    samples        samples given as a [t x channels] timeseries vector
+%                   or as buzcode structure with fields samples.data,
+%                   samples.timestamps, samples.samplingRate
+%    <options>      optional list of property-value pairs (see table below)
+%
+%    =========================================================================
+%     Properties    Values
+%    -------------------------------------------------------------------------
+%     'passband'    pass frequency range. [0 X] for low-pass, [X inf] for highpass
+%     'stopband'    stop frequency range
+%     'order'       filter order (number of cycles, default = 4)
+%     'ripple'      filter ripple (default = 20)
+%     'filter'      choose filter type between 'cheby2' (default) and 'fir1'
+%     'nyquist'     nyquist frequency (default = 500)
+%     'FMAlegacy'   true/false, uses FMA legacy input style
+%                   (samples given as a list of (t,v1,v2,v3...) tuples)
+%    =========================================================================
+%
+%OUTPUT
+%   filtered        -if the input is a timeseries vector, output is as well
+%% Parms and Defaults 
+
+% Default values
+passband = [];
+stopband = [];
+order = 4;
+ripple = 20;
+nyquist = 500; %written over later from samples.samplingRate if available
+type = 'cheby2';
+FMAlegacy = false;
+matlabVersion = version('-release');
+
+
+% Check number of parameters
+if nargin < 1 || mod(length(varargin),2) ~= 0,
+	error('Incorrect number of parameters!');
+end
+if isempty(samples),
+	error('Missing input data!');
+end
+
+% Parse parameter list
+for i = 1:2:length(varargin),
+	if ~ischar(varargin{i}),
+		error(['Parameter ' num2str(i) ' is not a property (type ''help <a href="matlab:help Filter">Filter</a>'' for details).']);
+	end
+	switch(lower(varargin{i})),
+		case 'passband',
+			if ~isempty(stopband),
+				error('Cannot specify both a passband and stopband (type ''help <a href="matlab:help Filter">Filter</a>'' for details).');
+			end
+			passband = varargin{i+1};
+% 			if ~isdvector(passband,'#2','>=0'),
+% 				error('Incorrect value for ''passband'' (type ''help <a href="matlab:help Filter">Filter</a>'' for details).');
+%             end
+		case 'stopband',
+			if ~isempty(passband),
+				error('Cannot specify both a passband and stopband (type ''help <a href="matlab:help Filter">Filter</a>'' for details).');
+			end
+			stopband = varargin{i+1};
+% 			if ~isdvector(stopband,'#2','>=0'),
+% 				error('Incorrect value for ''stopband'' (type ''help <a href="matlab:help Filter">Filter</a>'' for details).');
+%             end
+		case 'filter',
+			type = lower(varargin{i+1});
+			if ~isstring_FMAT(type,'cheby2','fir1','butter'),
+				error(['Unknown filter type ''' type ''' (type ''help <a href="matlab:help Filter">Filter</a>'' for details).']);
+			end
+
+		case 'order',
+			order = lower(varargin{i+1});
+			if ~isiscalar(order,'>0'),
+				error('Incorrect value for ''order'' (type ''help <a href="matlab:help Filter">Filter</a>'' for details).');
+			end
+
+		case 'ripple',
+			ripple = lower(varargin{i+1});
+			if ~isiscalar(ripple,'>0'),
+				error('Incorrect value for ''ripple'' (type ''help <a href="matlab:help Filter">Filter</a>'' for details).');
+			end
+
+		case 'nyquist',
+			nyquist = varargin{i+1};
+            if ~isiscalar(nyquist,'>0'),
+				error('Incorrect value for property ''nyquist'' (type ''help <a href="matlab:help Filter">Filter</a>'' for details).');
+            end
+            
+        case 'fmalegacy'
+            FMAlegacy = varargin{i+1};
+            if ~islogical(FMAlegacy)
+                error('Incorrect value for property ''FMALegacy''');
+            end
+
+		otherwise,
+			error(['Unknown property ''' num2str(varargin{i}) ''' (type ''help <a href="matlab:help Filter">Filter</a>'' for details).']);
+
+	end
+end
+%%
+if isempty(passband) && isempty(stopband),
+	error('Missing passband or stopband (type ''help <a href="matlab:help Filter">Filter</a>'' for details).');
+end
+
+
+switch(type),
+	case 'cheby2',
+        if ~isempty(passband),
+			if passband(1) == 0,
+				[b,a] = cheby2(order,ripple,passband(2)/nyquist,'low');
+            elseif passband(2) == inf
+                [b,a] = cheby2(order,ripple,passband(1)/nyquist,'high');
+			else
+				[b,a] = cheby2(order,ripple,passband/nyquist);
+			end
+		else
+			[b,a] = cheby2(order,ripple,stopband/nyquist,'stop');
+        end
+	case 'fir1',
+        %Order input to fir1 needs to be in samples, not cycles
+        if ~isempty(passband),
+			if passband(1) == 0,
+                filt_order = round(order*2*nyquist./passband(2));    
+				[b,a] = fir1(filt_order,passband(2)/nyquist,'low');
+            elseif passband(2) == inf
+                filt_order = round(order*2*nyquist./passband(1));    
+				[b,a] = fir1(filt_order,passband(1)/nyquist,'high');
+            else
+                filt_order = round(order*2*nyquist./passband(1));  
+				[b,a] = fir1(filt_order,passband/nyquist);
+			end
+        else
+            filt_order = round(order*2*nyquist./stopband(1));
+			[b,a] = fir1(filt_order,stopband/nyquist,'stop');
+        end
+    case 'butter'
+        if ~isempty(passband)
+            [b,a] = butter(order,[passband(1)/nyquist passband(2)/nyquist],'bandpass');
+        else
+            [b,a] = butter(order,stopband(1)/nyquist,'stop');
+        end
+end
+%%
+
+if FMAlegacy %FMA has (samples given as a list of (t,v1,v2,v3...) tuples)
+    filtered(:,1) = samples(:,1);
+    for i = 2:size(samples,2),
+        if strcmp(matlabVersion,'2017a')
+            filtered(:,i) = filtfilt(b,a,double(samples(:,i)));
+        else
+            filtered(:,i) = FiltFiltM(b,a,double(samples(:,i)));
+        end
+        hilb = hilbert(filtered(:,i));
+        amp(:,i) = abs(hilb);
+        phase(:,i) = angle(hilb);
+    end
+else %or if you just want filter a basic timeseries
+    for i = 1:size(samples,2),
+        if strcmp(matlabVersion,'2017a')
+            filtered(:,i) = filtfilt(b,a,double(samples(:,i)));
+        else
+            filtered(:,i) = FiltFiltM(b,a,double(samples(:,i)));    
+        end
+        hilb = hilbert(filtered(:,i));
+        amp(:,i) = abs(hilb);
+        phase(:,i) = angle(hilb);
+    end
+end
+
+end
