@@ -1,5 +1,5 @@
 function [comod] = bz_ModIndexCF(lfpphs,lfpamp,phaserange,amprange,flagPlot)
-
+%%
 
 nfreqs = length(amprange);
 
